@@ -4,33 +4,41 @@ import pandas as pd
 
 class RealCodecGA_JGG_AREX:
     '''
+    
     実数値遺伝的アルゴリズム（生存選択モデルJGG、交叉SPX）
 
-    初期化
-    交叉する個体の選択
-    交叉
-    残す個体の選択
     '''
-    def __init__(self, gene_num, 
-                 evaluation_func, 
-                 initial_min, initial_max, 
-                 population=None, 
-                 crossover_num=None, child_num=None, 
-                 initial_expantion_rate=None, learning_rate=None, 
-                 seed=None):
-        '''
-        recommended value of parameter are following.
-         crossover_num = gene_num + 1
-         child_num = 4 * gene_num (~4 * crossover_num)
-         initial_expantion_rate = 1.0
-         learning_rate = 1/5/gene_num
-        '''
-        # 結果削除
-        if os.path.isdir('result'): shutil.rmtree('result')
-
+    def __init__(self, gene_num, evaluation_func, initial_min, initial_max,
+                 population=None, crossover_num=None,child_num=None,
+                initial_expantion_rate=None, learning_rate=None, seed=None,
+                result_path='result'):
         #乱数シード
         np.random.seed(seed=seed)
 
+        # 結果削除
+        self._initialize_result(result_path)
+
+        # メンバの初期化
+        self._initialize_attributes(gene_num, evaluation_func, initial_min,
+                                    initial_max, population, crossover_num,
+                                    child_num, initial_expantion_rate, learning_rate)
+        
+        # 集団の初期化
+        self._initialize_genes()
+
+        # 最初の評価
+        self._initial_evaluation()
+
+    def _initialize_result(self, result_path):
+        self.result_path = result_path
+        if os.path.isdir(self.result_path): shutil.rmtree(self.result_path)
+        
+    def _initialize_attributes(self, gene_num, 
+                 evaluation_func, 
+                 initial_min, initial_max,
+                 population=None, 
+                 crossover_num=None, child_num=None, 
+                 initial_expantion_rate=None, learning_rate=None, ):
         # 遺伝子情報
         self.gene_num = gene_num
 
@@ -74,17 +82,13 @@ class RealCodecGA_JGG_AREX:
         self.best_evaluation = None # 現時点で一番高い評価値
         self.last_gene = None # 最終時点での遺伝子
         self.generation = 0 # 世代数
-        
-        #
-        self.__initialize_genes()
 
-        return
-
-    def __initialize_genes(self):
+    def _initialize_genes(self):
         # 遺伝子の初期値設定
         # genes = [[gene_0], [gene_1], ... ,[gene_population]]
         self.genes = self.initial_min + (self.initial_max - self.initial_min) * np.random.rand(self.population, self.gene_num)
 
+    def _initial_evaluation(self):
         # 遺伝子の評価値
         self.evals = self.evaluation_func(self.genes)
         
@@ -92,8 +96,6 @@ class RealCodecGA_JGG_AREX:
         min_idx = np.argmin(self.evals)
         self.best_evaluation = self.evals[min_idx]
         self.best_gene = self.genes[min_idx].copy()
-
-        return
 
     def generation_step(self):
         self.generation += 1
@@ -103,19 +105,19 @@ class RealCodecGA_JGG_AREX:
 
         # 交叉する個体の選択
         # 交叉する個体のインデックス
-        crossed_idx = self.__random_select(pop, self.crossed_num)
+        crossed_idx = self._random_select(pop, self.crossed_num)
 
         # 交叉
-        child_genes, rand_mtrx = self.__arex_crossover(self.genes[crossed_idx], self.evals[crossed_idx], self.child_num, self.expantion_rate)
+        child_genes, rand_mtrx = self._arex_crossover(self.genes[crossed_idx], self.evals[crossed_idx], self.child_num, self.expantion_rate)
 
         # 残す個体の選択
-        survive_genes, survive_evals, survive_idx = self.__ranking_survival(child_genes, self.evaluation_func, survive_num=self.crossed_num)
+        survive_genes, survive_evals, survive_idx = self._ranking_survival(child_genes, self.evaluation_func, survive_num=self.crossed_num)
         # 親個体と変更
         self.genes[crossed_idx] = survive_genes.copy()
         self.evals[crossed_idx] = survive_evals
 
         # 拡張率の更新
-        self.expantion_rate = self.__update_arex_expantion_rate(self.expantion_rate, self.learning_rate, rand_mtrx[survive_idx], crss_num=self.crossed_num)
+        self.expantion_rate = self._update_arex_expantion_rate(self.expantion_rate, self.learning_rate, rand_mtrx[survive_idx], crss_num=self.crossed_num)
         #print(self.expantion_rate)
 
         min_idx = np.argmin(survive_evals)
@@ -135,23 +137,23 @@ class RealCodecGA_JGG_AREX:
         return dvs
     
     def save_result(self):
-        if not os.path.isdir('result'): os.makedirs('result')
-        if not os.path.isdir('result/population'): os.makedirs('result/population')
-        if not os.path.isdir('result/elite_img'): os.makedirs('result/elite_img')
+        if not os.path.isdir(self.result_path): os.makedirs(self.result_path)
+        if not os.path.isdir(f'{self.result_path}/population'): os.makedirs(f'{self.result_path}/population')
+        if not os.path.isdir(f'{self.result_path}/elite_img'): os.makedirs(f'{self.result_path}/elite_img')
         pd.DataFrame(self.genes).to_csv(
-            f'result/population/{self.generation}.csv', index=None
+            f'{self.result_path}/population/{self.generation}.csv', index=None
         )
-        with open('result/obj_func.csv', 'a') as f: f.write(f'{self.best_evaluation}\n')
-        with open('result/elite.csv', 'a') as f: f.write(f'{",".join(str(i) for i in self.best_gene)}\n')
+        with open(f'{self.result_path}/obj_func.csv', 'a') as f: f.write(f'{self.best_evaluation}\n')
+        with open(f'{self.result_path}/elite.csv', 'a') as f: f.write(f'{",".join(str(i) for i in self.best_gene)}\n')
 
 
     @staticmethod
-    def __random_select(population, select_num):
+    def _random_select(population, select_num):
         selected_idx = np.random.choice(np.arange(population), select_num, replace=False)
         return selected_idx
 
     @staticmethod
-    def __arex_crossover(genes, evals, child_num, expantion_rate):
+    def _arex_crossover(genes, evals, child_num, expantion_rate):
         # 交叉される遺伝子数
         crss_num = len(genes)
 
@@ -174,7 +176,7 @@ class RealCodecGA_JGG_AREX:
         return child_genes, rnd_mtrx
 
     @staticmethod
-    def __update_arex_expantion_rate(expantion_rate, learning_rate, survive_rand_mtrx, crss_num=None):
+    def _update_arex_expantion_rate(expantion_rate, learning_rate, survive_rand_mtrx, crss_num=None):
         survive_num = len(survive_rand_mtrx)
         #
         crss_num_ = crss_num if crss_num is not None else survive_num
@@ -188,7 +190,7 @@ class RealCodecGA_JGG_AREX:
         return new_expantion_rate
 
     @staticmethod
-    def __ranking_survival(genes, evaluation_func, survive_num):
+    def _ranking_survival(genes, evaluation_func, survive_num):
         evals = evaluation_func(genes)
         survive_idx = np.argpartition(evals, survive_num)[:survive_num]
         #
