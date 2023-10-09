@@ -69,9 +69,6 @@ class RealCodecGA_JGG_AREX:
         self.last_gene = None           # 最終時点での遺伝子
         self.generation = 0             # 世代数
 
-        print(f'gene_num : {self.gene_num}, pop : {self.population}, parent : {self.parent_num}, child : {self.child_num}')
-        exit()
-
     def _initialize_genes(self):
         # 遺伝子の初期値設定
         # genes = [[gene_0], [gene_1], ... ,[gene_population]]
