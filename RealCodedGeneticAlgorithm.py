@@ -119,7 +119,6 @@ class RealCodecGA_JGG_AREX:
     def save_result(self):
         if not os.path.isdir(self.result_path): os.makedirs(self.result_path)
         if not os.path.isdir(f'{self.result_path}/population'): os.makedirs(f'{self.result_path}/population')
-        if not os.path.isdir(f'{self.result_path}/elite_img'): os.makedirs(f'{self.result_path}/elite_img')
         pd.DataFrame(self.genes).to_csv(
             f'{self.result_path}/population/{self.generation}.csv', index=None
         )
