@@ -34,7 +34,10 @@ class RealCodecGA_JGG_AREX:
     def _initialize_result(self, result_path):
         self.result_path = result_path
         if os.path.isdir(self.result_path): shutil.rmtree(self.result_path)
-        
+        os.makedirs(self.result_path)
+        os.makedirs(f'{self.result_path}/population')
+        os.makedirs(f'{self.result_path}/elite_img')
+
     def _initialize_attributes(self, gene_num, evaluation_func, population):
         # 遺伝子サイズ
         self.gene_num = gene_num
@@ -116,12 +119,11 @@ class RealCodecGA_JGG_AREX:
         
         return best_survive_evals
 
-    def save_result(self):
-        if not os.path.isdir(self.result_path): os.makedirs(self.result_path)
-        if not os.path.isdir(f'{self.result_path}/population'): os.makedirs(f'{self.result_path}/population')
-        pd.DataFrame(self.genes).to_csv(
-            f'{self.result_path}/population/{self.generation}.csv', index=None
-        )
+    def save_result(self, save_population=False):
+        if save_population:
+            pd.DataFrame(self.genes).to_csv(
+                f'{self.result_path}/population/{self.generation}.csv', index=None
+            )
         with open(f'{self.result_path}/obj_func.csv', 'a') as f: f.write(f'{self.best_evaluation}\n')
         with open(f'{self.result_path}/elite.csv', 'a') as f: f.write(f'{",".join(str(i) for i in self.best_gene)}\n')
 
